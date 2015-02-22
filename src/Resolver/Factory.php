@@ -13,35 +13,46 @@ use React\Dns\Query\RetryExecutor;
 
 class Factory
 {
-    public function create($nameserver, LoopInterface $loop)
+    private $loop;
+
+    public function __construct(LoopInterface $loop)
+    {
+        $this->loop = $loop;
+    }
+
+    public function create($nameserver)
     {
         $nameserver = $this->addPortToServerIfMissing($nameserver);
-        $executor = $this->createRetryExecutor($loop);
+        $executor = $this->createRetryExecutor();
 
         return new Resolver($nameserver, $executor);
     }
 
-    public function createCached($nameserver, LoopInterface $loop)
+    public function createCached($nameserver, Cache $cache = null)
     {
+        if ($cache === null) {
+            $cache = new ArrayCache();
+        }
+
         $nameserver = $this->addPortToServerIfMissing($nameserver);
-        $executor = $this->createCachedExecutor($loop);
+        $executor = $this->createCachedExecutor($cache);
 
         return new Resolver($nameserver, $executor);
     }
 
-    protected function createExecutor(LoopInterface $loop)
+    protected function createExecutor()
     {
-        return new Executor($loop, new Parser(), new BinaryDumper());
+        return new Executor($this->loop, new Parser(), new BinaryDumper());
     }
 
-    protected function createRetryExecutor(LoopInterface $loop)
+    protected function createRetryExecutor()
     {
-        return new RetryExecutor($this->createExecutor($loop));
+        return new RetryExecutor($this->createExecutor());
     }
 
-    protected function createCachedExecutor(LoopInterface $loop)
+    protected function createCachedExecutor(Cache $cache)
     {
-        return new CachedExecutor($this->createRetryExecutor($loop), new RecordCache(new ArrayCache()));
+        return new CachedExecutor($this->createRetryExecutor(), new RecordCache($cache));
     }
 
     protected function addPortToServerIfMissing($nameserver)
