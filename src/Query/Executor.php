@@ -9,39 +9,35 @@ use React\Dns\Protocol\BinaryDumper;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Socket\Connection;
+use React\Dns\Model\MessageFactory;
 
 class Executor implements ExecutorInterface
 {
     private $loop;
     private $parser;
     private $dumper;
+    private $messageFactory;
 
-    public function __construct(LoopInterface $loop, Parser $parser, BinaryDumper $dumper)
+    public function __construct(LoopInterface $loop, Parser $parser, BinaryDumper $dumper, MessageFactory $messageFactory = null)
     {
+        if ($messageFactory === null) {
+            $messageFactory = new MessageFactory();
+        }
+
         $this->loop = $loop;
         $this->parser = $parser;
         $this->dumper = $dumper;
+        $this->messageFactory = $messageFactory;
     }
 
     public function query($nameserver, Query $query)
     {
-        $request = $this->prepareRequest($query);
+        $request = $this->messageFactory->createRequestForQuery($query);
 
         $queryData = $this->dumper->toBinary($request);
         $transport = strlen($queryData) > 512 ? 'tcp' : 'udp';
 
         return $this->doQuery($nameserver, $transport, $queryData, $query->name);
-    }
-
-    public function prepareRequest(Query $query)
-    {
-        $request = new Message();
-        $request->header->set('id', $this->generateId());
-        $request->header->set('rd', 1);
-        $request->questions[] = (array) $query;
-        $request->prepare();
-
-        return $request;
     }
 
     public function doQuery($nameserver, $transport, $queryData, $name)
@@ -86,11 +82,6 @@ class Executor implements ExecutorInterface
         $conn->write($queryData);
 
         return $deferred->promise();
-    }
-
-    protected function generateId()
-    {
-        return mt_rand(0, 0xffff);
     }
 
     protected function createConnection($nameserver, $transport)
