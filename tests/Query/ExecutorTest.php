@@ -107,13 +107,6 @@ class ExecutorTest extends \PHPUnit_Framework_TestCase
     {
         $conn = $this->createConnectionMock();
 
-        $timer = $this->getMock('React\EventLoop\Timer\TimerInterface');
-
-        $this->loop
-            ->expects($this->any())
-            ->method('addTimer')
-            ->will($this->returnValue($timer));
-
         $this->parser
             ->expects($this->at(0))
             ->method('parseChunk')
@@ -144,13 +137,6 @@ class ExecutorTest extends \PHPUnit_Framework_TestCase
     /** @test */
     public function resolveShouldFailIfResponseIsTruncatedAfterTcpRequest()
     {
-        $timer = $this->getMock('React\EventLoop\Timer\TimerInterface');
-
-        $this->loop
-            ->expects($this->any())
-            ->method('addTimer')
-            ->will($this->returnValue($timer));
-
         $this->parser
             ->expects($this->once())
             ->method('parseChunk')
@@ -176,80 +162,6 @@ class ExecutorTest extends \PHPUnit_Framework_TestCase
         $query = new Query(str_repeat('a', 512).'.igor.io', Message::TYPE_A, Message::CLASS_IN, 1345656451);
         $this->executor->query('8.8.8.8:53', $query)
             ->then($this->expectCallableNever(), $mock);
-    }
-
-    /** @test */
-    public function resolveShouldCancelTimerWhenFullResponseIsReceived()
-    {
-        $conn = $this->createConnectionMock();
-
-        $this->parser
-            ->expects($this->once())
-            ->method('parseChunk')
-            ->with($this->anything(), $this->isInstanceOf('React\Dns\Model\Message'))
-            ->will($this->returnStandardResponse());
-
-        $this->executor = $this->createExecutorMock();
-        $this->executor
-            ->expects($this->at(0))
-            ->method('createConnection')
-            ->with('8.8.8.8:53', 'udp')
-            ->will($this->returnNewConnectionMock());
-
-
-        $timer = $this->getMock('React\EventLoop\Timer\TimerInterface');
-        $timer
-            ->expects($this->once())
-            ->method('cancel');
-
-        $this->loop
-            ->expects($this->once())
-            ->method('addTimer')
-            ->with(5, $this->isInstanceOf('Closure'))
-            ->will($this->returnValue($timer));
-
-        $query = new Query('igor.io', Message::TYPE_A, Message::CLASS_IN, 1345656451);
-        $this->executor->query('8.8.8.8:53', $query, function () {}, function () {});
-    }
-
-    /** @test */
-    public function resolveShouldCloseConnectionOnTimeout()
-    {
-        $this->executor = $this->createExecutorMock();
-        $this->executor
-            ->expects($this->at(0))
-            ->method('createConnection')
-            ->with('8.8.8.8:53', 'udp')
-            ->will($this->returnNewConnectionMock());
-
-        $this->loop
-            ->expects($this->once())
-            ->method('addTimer')
-            ->with(5, $this->isInstanceOf('Closure'))
-            ->will($this->returnCallback(function ($time, $callback) use (&$timerCallback) {
-                $timerCallback = $callback;
-            }));
-
-        $this->loop
-            ->expects($this->never())
-            ->method('cancelTimer');
-
-        $callback = $this->expectCallableNever();
-
-        $errorback = $this->createCallableMock();
-        $errorback
-            ->expects($this->once())
-            ->method('__invoke')
-            ->with($this->logicalAnd(
-                $this->isInstanceOf('React\Dns\Query\TimeoutException'),
-                $this->attribute($this->equalTo('DNS query for igor.io timed out'), 'message')
-            ));
-
-        $query = new Query('igor.io', Message::TYPE_A, Message::CLASS_IN, 1345656451);
-        $this->executor->query('8.8.8.8:53', $query)->then($callback, $errorback);
-
-        $this->assertNotNull($timerCallback);
-        $timerCallback();
     }
 
     private function returnStandardResponse()

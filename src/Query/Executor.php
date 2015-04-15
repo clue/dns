@@ -15,14 +15,12 @@ class Executor implements ExecutorInterface
     private $loop;
     private $parser;
     private $dumper;
-    private $timeout;
 
-    public function __construct(LoopInterface $loop, Parser $parser, BinaryDumper $dumper, $timeout = 5)
+    public function __construct(LoopInterface $loop, Parser $parser, BinaryDumper $dumper)
     {
         $this->loop = $loop;
         $this->parser = $parser;
         $this->dumper = $dumper;
-        $this->timeout = $timeout;
     }
 
     public function query($nameserver, Query $query)
@@ -53,10 +51,9 @@ class Executor implements ExecutorInterface
         $loop = $this->loop;
 
         $response = new Message();
-        $deferred = new Deferred(function ($resolve, $reject) use (&$timer, &$conn, $name) {
+        $deferred = new Deferred(function ($resolve, $reject) use (&$conn, $name) {
             $reject(new CancellationException(sprintf('DNS query for %s has been cancelled', $name)));
 
-            $timer->cancel();
             $conn->close();
         });
 
@@ -64,20 +61,13 @@ class Executor implements ExecutorInterface
             return $that->doQuery($nameserver, 'tcp', $queryData, $name);
         };
 
-        $timer = $this->loop->addTimer($this->timeout, function () use (&$conn, $name, $deferred) {
-            $conn->close();
-            $deferred->reject(new TimeoutException(sprintf("DNS query for %s timed out", $name)));
-        });
-
         $conn = $this->createConnection($nameserver, $transport);
-        $conn->on('data', function ($data) use ($retryWithTcp, $conn, $parser, $response, $transport, $deferred, $timer) {
+        $conn->on('data', function ($data) use ($retryWithTcp, $conn, $parser, $response, $transport, $deferred) {
             $responseReady = $parser->parseChunk($data, $response);
 
             if (!$responseReady) {
                 return;
             }
-
-            $timer->cancel();
 
             if ($response->header->isTruncated()) {
                 if ('tcp' === $transport) {

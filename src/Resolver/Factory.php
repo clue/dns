@@ -10,6 +10,7 @@ use React\Dns\Protocol\Parser;
 use React\Dns\Protocol\BinaryDumper;
 use React\EventLoop\LoopInterface;
 use React\Dns\Query\RetryExecutor;
+use React\Dns\Query\TimeoutExecutor;
 
 class Factory
 {
@@ -31,7 +32,7 @@ class Factory
 
     protected function createExecutor(LoopInterface $loop)
     {
-        return new Executor($loop, new Parser(), new BinaryDumper());
+        return new TimeoutExecutor(new Executor($loop, new Parser(), new BinaryDumper()), $loop);
     }
 
     protected function createRetryExecutor(LoopInterface $loop)
