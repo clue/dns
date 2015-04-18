@@ -10,6 +10,7 @@ use React\Dns\Protocol\Parser;
 use React\Dns\Protocol\BinaryDumper;
 use React\EventLoop\LoopInterface;
 use React\Dns\Query\RetryExecutor;
+use React\Dns\Query\RejectingExecutor;
 
 class Factory
 {
@@ -27,6 +28,11 @@ class Factory
         $executor = $this->createCachedExecutor($loop);
 
         return new Resolver($nameserver, $executor);
+    }
+
+    public function createNullResolver()
+    {
+        return new Resolver('0.0.0.0:53', new RejectingExecutor(new \BadMethodCallException('This dummy does not support DNS resolution')));
     }
 
     protected function createExecutor(LoopInterface $loop)

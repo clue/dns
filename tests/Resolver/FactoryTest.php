@@ -42,6 +42,16 @@ class FactoryTest extends TestCase
         $this->assertInstanceOf('React\Dns\Query\CachedExecutor', $this->getResolverPrivateMemberValue($resolver, 'executor'));
     }
 
+    /** @test */
+    public function createNullResolverShouldCreateResolverWithRejectingExecutor()
+    {
+        $factory = new Factory();
+        $resolver = $factory->createNullResolver();
+
+        $this->assertInstanceOf('React\Dns\Resolver\Resolver', $resolver);
+        $this->assertInstanceOf('React\Dns\Query\RejectingExecutor', $this->getResolverPrivateMemberValue($resolver, 'executor'));
+    }
+
     /**
      * @test
      * @dataProvider factoryShouldAddDefaultPortProvider
