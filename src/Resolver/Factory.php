@@ -3,13 +3,17 @@
 namespace React\Dns\Resolver;
 
 use React\Cache\ArrayCache;
-use React\Dns\Query\Executor;
 use React\Dns\Query\CachedExecutor;
 use React\Dns\Query\RecordCache;
 use React\Dns\Protocol\Parser;
 use React\Dns\Protocol\BinaryDumper;
 use React\EventLoop\LoopInterface;
 use React\Dns\Query\RetryExecutor;
+use React\Dns\Query\SelectiveTransportExecutor;
+use React\Dns\Query\DatagramTransportExecutor;
+use React\Dns\Query\StreamTransportExecutor;
+use React\Datagram\Factory as DatagramFactory;
+use React\SocketClient\TcpConnector;
 use React\Dns\Query\TimeoutExecutor;
 
 class Factory
@@ -32,7 +36,20 @@ class Factory
 
     protected function createExecutor(LoopInterface $loop)
     {
-        return new RetryExecutor(new TimeoutExecutor(new Executor($loop, new Parser(), new BinaryDumper()), 5.0, $loop));
+        return new RetryExecutor(
+            new TimeoutExecutor(
+                new SelectiveTransportExecutor(
+                    new DatagramTransportExecutor(
+                        new DatagramFactory($loop)
+                    ),
+                    new StreamTransportExecutor(
+                        new TcpConnector($loop)
+                    )
+                ),
+                5.0,
+                $loop
+            )
+        );
     }
 
     protected function addPortToServerIfMissing($nameserver)
