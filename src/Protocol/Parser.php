@@ -12,6 +12,16 @@ use React\Dns\Model\Record;
  */
 class Parser
 {
+    public function parseMessage($data)
+    {
+        $message = new Message();
+        if ($this->parseChunk($data, $message) !== $message) {
+            throw new \InvalidArgumentException('Unable to parse');
+        }
+
+        return $message;
+    }
+
     public function parseChunk($data, Message $message)
     {
         $message->data .= $data;
