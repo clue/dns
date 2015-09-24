@@ -32,7 +32,7 @@ class Factory
 
     protected function createExecutor(LoopInterface $loop)
     {
-        return new TimeoutExecutor(new Executor($loop, new Parser(), new BinaryDumper()), $loop);
+        return new TimeoutExecutor(new Executor($loop, new Parser(), new BinaryDumper()), 5.0, $loop);
     }
 
     protected function createRetryExecutor(LoopInterface $loop)

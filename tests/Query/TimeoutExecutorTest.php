@@ -19,7 +19,7 @@ class TimeoutExecutorTest extends TestCase
 
         $this->wrapped = $this->getMock('React\Dns\Query\ExecutorInterface');
 
-        $this->executor = new TimeoutExecutor($this->wrapped, $this->loop);
+        $this->executor = new TimeoutExecutor($this->wrapped, 5, $this->loop);
     }
 
     public function testCancelWrappedWhenCancelled()
