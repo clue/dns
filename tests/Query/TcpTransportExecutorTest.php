@@ -245,6 +245,9 @@ class TcpTransportExecutorTest extends TestCase
         $this->assertFalse($wait);
     }
 
+    /**
+     * @group a
+     */
     public function testQueryStaysPendingWhenClientCanNotSendExcessiveMessageInOneChunkWhenServerClosesSocket()
     {
         $writableCallback = null;
@@ -262,7 +265,7 @@ class TcpTransportExecutorTest extends TestCase
         $address = stream_socket_get_name($server, false);
         $executor = new TcpTransportExecutor($address, $loop);
 
-        $query = new Query('google' . str_repeat('.com', 10000), Message::TYPE_A, Message::CLASS_IN);
+        $query = new Query('google' . str_repeat('.com', 16000), Message::TYPE_A, Message::CLASS_IN);
 
         // send a bunch of queries and keep reference to last promise
         for ($i = 0; $i < 100; ++$i) {
