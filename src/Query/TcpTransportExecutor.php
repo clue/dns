@@ -184,6 +184,10 @@ class TcpTransportExecutor implements ExecutorInterface
 
             // set socket to non-blocking and wait for it to become writable (connection success/rejected)
             \stream_set_blocking($socket, false);
+            if (\function_exists('stream_set_chunk_size')) {
+                \stream_set_chunk_size($socket, 1 << 31 - 1);
+            }
+            stream_set_write_buffer($socket, 100);
             $this->socket = $socket;
         }
 
@@ -232,9 +236,15 @@ class TcpTransportExecutor implements ExecutorInterface
             $this->loop->addReadStream($this->socket, array($this, 'handleRead'));
         }
 
+        $error = null;
+        \set_error_handler(function ($_, $errstr) use (&$error) {
+            $error = $errstr;
+        });
         $written = @\fwrite($this->socket, $this->writeBuffer);
-        if ($written === false || $written === 0) {
-            $this->closeError('Unable to write to closed socket');
+        \restore_error_handler();
+
+        if (($written === false || $written === 0) && $error !== null) {
+            $this->closeError('Unable to write to DNS server (' . $error . ')');
             return;
         }
 

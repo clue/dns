@@ -16,4 +16,4 @@ jobs:
           php-version: 8.0
           coverage: xdebug
       - run: composer install
-      - run: vendor/bin/phpunit --coverage-text --group a --repeat 100
+      - run: vendor/bin/phpunit --coverage-text --filter testQueryStaysPendingWhenClientCanNotSendExcessiveMessageInOneChunkWhenServerClosesSocket --repeat 100
